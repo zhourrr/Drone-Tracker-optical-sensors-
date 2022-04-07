@@ -47,7 +47,9 @@ class MyDetector:
             self.__roi_info = roi
         self.__mask = [None] * self.num_cameras
         self.__background = [None] * self.num_cameras
-        self.__candidates = [[]] * self.num_cameras
+        self.__candidates = []
+        for i in range(self.num_cameras):
+            self.__candidates.append([])
         self.__bg_counter = 0
         self.__wT = wt
         self.__area_max = area_max
@@ -70,7 +72,9 @@ class MyDetector:
         """
         use the initial frames as the backgrounds
         """
-        init_frames = [[]] * self.num_cameras
+        init_frames = [] * self.num_cameras
+        for i in range(self.num_cameras):
+            init_frames.append([])
         for num in range(30):       # use the first 30 frames as background
             for camera in range(self.num_cameras):
                 _, temp_frame = self.__cameras[camera].read()
@@ -100,10 +104,11 @@ class MyDetector:
         them into class variables frames and roi, then
         apply background subtraction
         """
+        # read frames
         for camera in range(self.num_cameras):
             _, temp_frame = self.__cameras[camera].read()
             self.roi[camera] = self.__get_roi(temp_frame, camera)
-
+        # remove background and draw bounding box
         self.__remove_background()
 
     def __remove_background(self):
@@ -131,6 +136,12 @@ class MyDetector:
                     x, y, w, h = cv2.boundingRect(contour)
                     cv2.rectangle(self.roi[camera], (x, y), (x + w, y + h), (0, 255, 0), 3)
 
+    def show(self):
+        for camera in range(self.num_cameras):
+            cv2.imshow("camera " + str(camera + 1), self.roi[camera])
+            cv2.imshow("mask " + str(camera + 1), self.__mask[camera])
+
+
     def detect(self):
         """
         an interface for users -- a warp function
@@ -140,7 +151,7 @@ class MyDetector:
             self.__read()
             #TODO: update the background periodically
             #self.__update_background()
-            cv2.imshow("i", self.roi[0])
+            self.show()
             key = cv2.waitKey(self.__wT)
             if key == 27:
                 break
@@ -148,7 +159,6 @@ class MyDetector:
 
 
 #myins = MyDetector(cameras=[0], roi=[[100, 200, 100, 200]])
-myins = MyDetector(cameras=["test.mp4"])
+myins = MyDetector(cameras=["test.mp4", 0])
 myins.detect()
-
 
