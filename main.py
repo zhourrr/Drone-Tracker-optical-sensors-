@@ -28,7 +28,7 @@ while True:
     _, mask = cv2.threshold(mask, 254, 255, cv2.THRESH_BINARY)
     _, mask_2 = cv2.threshold(mask_2, 254, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contours_2, _ = cv2.findContours(mask_2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours_, _ = cv2.findContours(mask_2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     detections = []
     detections_2 = []
     for cnt in contours:
