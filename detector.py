@@ -35,10 +35,9 @@ class MyDetector:
         if cameras is None:
             self.__cameras = [cv2.VideoCapture(0)]        # the default setting is the internal camera only
         else:
-            #self.__cameras = []
-            #for camera in cameras:
-            #    self.__cameras.append(cv2.VideoCapture(camera))
-            self.__cameras = [cv2.VideoCapture("test.mp4")]
+            self.__cameras = []
+            for camera in cameras:
+                self.__cameras.append(cv2.VideoCapture(camera))
         self.num_cameras = len(self.__cameras)
         if roi is None:
             self.__roi_info = []
@@ -117,11 +116,14 @@ class MyDetector:
             # blur the image, remove noises, parameters: kernel size, standard deviation
             b_frame = cv2.GaussianBlur(d_frame, (11, 11), 0)
             # thresholding
-            #_, t_frame = cv2.threshold(b_frame, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             _, t_frame = cv2.threshold(b_frame, 30, 255, cv2.THRESH_BINARY)
             self.__mask[camera] = t_frame
+            # find contours
             contours, _ = cv2.findContours(t_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            #cv2.drawContours(self.roi[camera], contours, cv2.FILLED, (0, 0, 255))
+            """
+            for debugging: this line of code draws contours   
+            cv2.drawContours(self.roi[camera], contours, cv2.FILLED, (0, 0, 255))
+            """
             # Calculate area and remove small elements
             for contour in contours:
                 area = cv2.contourArea(contour)
@@ -146,7 +148,7 @@ class MyDetector:
 
 
 #myins = MyDetector(cameras=[0], roi=[[100, 200, 100, 200]])
-myins = MyDetector(cameras=[0])
+myins = MyDetector(cameras=["test.mp4"])
 myins.detect()
 
 
