@@ -27,11 +27,12 @@ class MyDetector:
         __wT:           wait time
         __area_max:     the largest area of a detected contour
         __area_min:     the smallest area of a detected contour
+        __threshold:    the threshold for background subtraction
 
         num_cameras:    the number of cameras
         roi:            a list, which stores roi of each frame from each camera
     """
-    def __init__(self, cameras=None, roi=None, wt=30, area_min=700, area_max=15000):
+    def __init__(self, cameras=None, roi=None, wt=30, area_min=500, area_max=15000, threshold=35):
         if cameras is None:
             self.__cameras = [cv2.VideoCapture(0)]        # the default setting is the internal camera only
         else:
@@ -54,6 +55,7 @@ class MyDetector:
         self.__wT = wt
         self.__area_max = area_max
         self.__area_min = area_min
+        self.__threshold = threshold
         self.roi = [None] * self.num_cameras
 
     def __get_roi(self, frame, camera_idx):
@@ -121,7 +123,7 @@ class MyDetector:
             # blur the image, remove noises, parameters: kernel size, standard deviation
             b_frame = cv2.GaussianBlur(d_frame, (11, 11), 0)
             # thresholding
-            _, t_frame = cv2.threshold(b_frame, 30, 255, cv2.THRESH_BINARY)
+            _, t_frame = cv2.threshold(b_frame, self.__threshold, 255, cv2.THRESH_BINARY)
             self.__mask[camera] = t_frame
             # find contours
             contours, _ = cv2.findContours(t_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -144,7 +146,6 @@ class MyDetector:
             cv2.imshow("camera " + str(camera + 1), self.roi[camera])
             cv2.imshow("mask " + str(camera + 1), self.__mask[camera])
 
-
     def detect(self):
         """
         an interface for users -- a warp function
@@ -161,8 +162,6 @@ class MyDetector:
                 break
 
 
-
-#myins = MyDetector(cameras=[0], roi=[[100, 200, 100, 200]])
-myins = MyDetector(cameras=["test.mp4"])
+myins = MyDetector(cameras=["test.mp4", "test1.mp4"], threshold=25)
 myins.detect()
 
