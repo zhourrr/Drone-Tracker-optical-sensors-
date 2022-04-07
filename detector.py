@@ -4,6 +4,7 @@ This file is the implementation of object detector
 
 import cv2
 import numpy as np
+from tracker import TrackerIOU
 
 
 class MyDetector:
@@ -31,11 +32,12 @@ class MyDetector:
         __area_max:     the largest area of a detected contour
         __area_min:     the smallest area of a detected contour
         __threshold:    the threshold for background subtraction
+        __trackers:     a list, which contains tracking units for each camera
 
         num_cameras:    the number of cameras
         roi:            a list, which stores roi of each frame from each camera
     """
-    def __init__(self, cameras=None, roi=None, wt=30, area_min=500, area_max=15000, threshold=35):
+    def __init__(self, cameras=None, roi=None, wt=30, area_min=500, area_max=15000, thr_d=35, thr_t=0.3):
         if cameras is None:
             self.__cameras = [cv2.VideoCapture(0)]        # the default setting is the internal camera only
         else:
@@ -58,7 +60,10 @@ class MyDetector:
         self.__wT = wt
         self.__area_max = area_max
         self.__area_min = area_min
-        self.__threshold = threshold
+        self.__threshold = thr_d
+        self.__trackers = []
+        for i in range(self.num_cameras):
+            self.__trackers.append(TrackerIOU(thr_t))
         self.roi = [None] * self.num_cameras
 
     def __get_roi(self, frame, camera_idx):
@@ -135,11 +140,17 @@ class MyDetector:
             cv2.drawContours(self.roi[camera], contours, cv2.FILLED, (0, 0, 255))
             """
             # Calculate area and remove small elements
+            detected_objs = []
             for contour in contours:
                 area = cv2.contourArea(contour)
                 if self.__area_min < area < self.__area_max:
                     x, y, w, h = cv2.boundingRect(contour)
+                    detected_objs.append((x, y, w, h))
                     cv2.rectangle(self.roi[camera], (x, y), (x + w, y + h), (0, 255, 0), 3)
+            # tracking
+            ids = self.__trackers[camera].track(detected_objs)
+            for id_t, x_t, y_t, w_t, h_t in ids:
+                cv2.putText(self.roi[camera], str(id_t), (x_t, y_t - 15), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
 
     def show(self):
         """
@@ -164,7 +175,7 @@ class MyDetector:
                 cv2.destroyAllWindows()
                 break
 
-myins = MyDetector(cameras=["test.mp4"], wt=300)
+myins = MyDetector(cameras=["test.mp4", "test1.mp4"], wt=30)
 myins.detect()
 
 
