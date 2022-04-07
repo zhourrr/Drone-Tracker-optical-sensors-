@@ -15,7 +15,10 @@ class MyDetector:
                         example:    we want [340:720, 500:800] for camera 1, and
                                     we want [300:700, 550:850] for camera 2, then
                                     roi = [[340, 720, 500, 800], [300, 700, 550, 850]].
-        waitTime:  a number in the unit of millisecond
+        waitTime:   a number in the unit of millisecond
+        area_min:   the smallest area of a detected contour
+        area_max:   the largest area of a detected contour
+        threshold:  the threshold for background subtraction
 
     Class Variables:
         __cameras:      a list, which stores VideoCapture for each camera
@@ -162,6 +165,6 @@ class MyDetector:
                 break
 
 
-myins = MyDetector(cameras=["test.mp4", "test1.mp4"], threshold=25)
+myins = MyDetector(cameras=["test.mp4", "test1.mp4"], threshold=15)
 myins.detect()
 
