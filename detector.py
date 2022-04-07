@@ -164,7 +164,7 @@ class MyDetector:
                 cv2.destroyAllWindows()
                 break
 
-
-myins = MyDetector(cameras=["test.mp4", "test1.mp4"], threshold=15)
+myins = MyDetector(cameras=["test.mp4"], wt=300)
 myins.detect()
+
 
