@@ -137,6 +137,9 @@ class MyDetector:
                     cv2.rectangle(self.roi[camera], (x, y), (x + w, y + h), (0, 255, 0), 3)
 
     def show(self):
+        """
+        displays real-time videos with detected objects
+        """
         for camera in range(self.num_cameras):
             cv2.imshow("camera " + str(camera + 1), self.roi[camera])
             cv2.imshow("mask " + str(camera + 1), self.__mask[camera])
@@ -154,11 +157,12 @@ class MyDetector:
             self.show()
             key = cv2.waitKey(self.__wT)
             if key == 27:
+                cv2.destroyAllWindows()
                 break
 
 
 
 #myins = MyDetector(cameras=[0], roi=[[100, 200, 100, 200]])
-myins = MyDetector(cameras=["test.mp4", 0])
+myins = MyDetector(cameras=["test.mp4"])
 myins.detect()
 

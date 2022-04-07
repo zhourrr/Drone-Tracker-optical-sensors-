@@ -69,6 +69,7 @@ while True:
     cv2.imshow("Mask_2", mask_2)
     key = cv2.waitKey(30)
     if key == 27:
+        cv2.destroyAllWindows()
         break
 
 cap.release()
