@@ -35,9 +35,10 @@ class MyDetector:
         if cameras is None:
             self.__cameras = [cv2.VideoCapture(0)]        # the default setting is the internal camera only
         else:
-            self.__cameras = []
-            for camera in cameras:
-                self.__cameras.append(cv2.VideoCapture(camera))
+            #self.__cameras = []
+            #for camera in cameras:
+            #    self.__cameras.append(cv2.VideoCapture(camera))
+            self.__cameras = [cv2.VideoCapture("test.mp4")]
         self.num_cameras = len(self.__cameras)
         if roi is None:
             self.__roi_info = []
@@ -97,7 +98,8 @@ class MyDetector:
     def __read(self):
         """
         read rois from current frames from cameras, store
-        them into class variables frames and roi
+        them into class variables frames and roi, then
+        apply background subtraction
         """
         for camera in range(self.num_cameras):
             _, temp_frame = self.__cameras[camera].read()
@@ -126,8 +128,6 @@ class MyDetector:
                 if self.__area_min < area < self.__area_max:
                     x, y, w, h = cv2.boundingRect(contour)
                     cv2.rectangle(self.roi[camera], (x, y), (x + w, y + h), (0, 255, 0), 3)
-
-
 
     def detect(self):
         """
