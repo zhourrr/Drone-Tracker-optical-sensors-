@@ -37,7 +37,7 @@ class MyDetector:
         num_cameras:    the number of cameras
         roi:            a list, which stores roi of each frame from each camera
     """
-    def __init__(self, cameras=None, roi=None, wt=30, area_min=500, area_max=15000, thr_d=35, thr_t=0.3):
+    def __init__(self, cameras=None, roi=None, wt=30, area_min=500, area_max=15000, thr_d=60, thr_t=0.3):
         if cameras is None:
             self.__cameras = [cv2.VideoCapture(0)]        # the default setting is the internal camera only
         else:
@@ -175,7 +175,7 @@ class MyDetector:
                 cv2.destroyAllWindows()
                 break
 
-myins = MyDetector(cameras=["test.mp4", "test1.mp4"], wt=30)
+myins = MyDetector(cameras=["test.mp4", "test1.mp4"], wt=30, thr_d=30)
 myins.detect()
 
 
