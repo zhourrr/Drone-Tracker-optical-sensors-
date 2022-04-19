@@ -4,7 +4,7 @@ This file is the implementation of object detector
 
 import cv2
 import numpy as np
-from tracker import TrackerIOU
+from tracker import MyTracker
 from posi import *
 
 
@@ -43,11 +43,11 @@ class MyDetector:
 
         num_cameras:    the number of cameras
         roi:            a list, which stores roi of each frame from each camera
-        trajectory:     a list, which stores trajectories of detected objects
+        trajectory:     a dictionary, which stores trajectories of detected objects
     """
 
     def __init__(self, captures=None, roi=None, wt=15, area_min=300, area_max=50000,
-                 thr_d=40, thr_t=0.3, thr_s=0.45, cameras=None):
+                 thr_d=35, thr_t=0.3, thr_s=0.45, cameras=None):
         # captures
         if captures is None:
             self.__captures = [cv2.VideoCapture(0)]  # the default setting is the internal camera only
@@ -83,16 +83,13 @@ class MyDetector:
         self.__threshold = thr_d
         self.__trackers = []
         for i in range(self.num_cameras):
-            self.__trackers.append(TrackerIOU(thr_t))
+            self.__trackers.append(MyTracker(thr_t))
         self.__cur_objects = []
         for i in range(self.num_cameras):
             self.__cur_objects.append([])
         self.__similarity = thr_s
         self.roi = [None] * self.num_cameras
         self.trajectory = []
-        self.trajectory_opt = []
-
-        self.counter = 1  # a temporary variable
 
     def __get_roi(self, frame, camera_idx):
         """
@@ -130,7 +127,7 @@ class MyDetector:
         self.__bg_counter += 1
         if self.__bg_counter == 30:  # reached the upper limit
             for capture in range(self.num_cameras):
-                self.__background[capture] = np.median(self.__candidates[camera], axis=0).astype(dtype=np.uint8)
+                self.__background[capture] = np.median(self.__candidates[capture], axis=0).astype(dtype=np.uint8)
                 self.__candidates[capture] = []
             self.__bg_counter = 0
 
@@ -150,6 +147,7 @@ class MyDetector:
         self.__remove_background()
         # find contours
         self.__get_contours()
+        # consult the tracking unit
         self.__track()
         return True
 
@@ -201,10 +199,11 @@ class MyDetector:
         for capture in range(self.num_cameras):
             ids = self.__trackers[capture].track(self.__cur_objects[capture])
             for id_t, x_t, y_t, w_t, h_t in ids:
-                cv2.putText(self.roi[capture], str(id_t), (x_t, y_t - 15), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
+                cv2.putText(self.roi[capture], str(id_t), (x_t, y_t + h_t + 15), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
+            self.__trackers[capture].show_kf(self.roi[capture])
 
         if len(self.__cur_objects[0]) != 1 or len(self.__cur_objects[1]) != 1:
-            print("missing target")
+            pass
         else:
             x0 = self.__cur_objects[0][0][0] + self.__cur_objects[0][0][2] / 2
             y0 = self.__cur_objects[0][0][1] + self.__cur_objects[0][0][3] / 2
@@ -215,21 +214,7 @@ class MyDetector:
             if pos_3d[2] >= 0:
                 print("position error")
             else:
-                self.counter += 1
                 self.trajectory.append(pos_3d)
-                if self.counter % 5 == 0:
-                    pos_optim = [0, 0, 0]
-                    leng = len(self.trajectory)
-                    for i in self.trajectory:
-                        pos_optim[0] += i[0]
-                        pos_optim[1] += i[1]
-                        pos_optim[2] += i[2]
-                    pos_optim[0] /= leng
-                    pos_optim[1] /= leng
-                    pos_optim[2] /= leng
-                    self.trajectory = []
-                    self.trajectory_opt.append(pos_optim)
-                    print("3D coordinates:  ", pos_optim)
 
     def __similarity_compare(self, img1, img2):
         """
