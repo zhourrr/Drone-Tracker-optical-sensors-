@@ -20,7 +20,7 @@ fig = plt.figure()
 ax = p3.Axes3D(fig)
 
 # Fifty lines of random 3-D lines
-data = [Gen_Line(my_ins.trajectory_opt, 3)]
+data = [Gen_Line(my_ins.trajectory, 3)]
 
 # Creating fifty line objects.
 # NOTE: Can't pass empty arrays into 3d version of plot()

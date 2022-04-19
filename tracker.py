@@ -2,7 +2,6 @@
 This file is the implementation of IOU Tracker.
 """
 import cv2
-
 from kalman_filter import MyKalmanFilter
 
 
@@ -19,7 +18,7 @@ class MyTracker:
         objects:        a dictionary, which stores information of previously detected objects,
                         in the form of id: (left-top position x, y, width, height)
     """
-    def __init__(self, threshold, max_frames=12):
+    def __init__(self, threshold, max_frames=120):
         self.objects = {}
         self.__kfs = {}
         self.__threshold = threshold

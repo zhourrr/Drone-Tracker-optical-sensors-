@@ -47,7 +47,7 @@ class MyDetector:
     """
 
     def __init__(self, captures=None, roi=None, wt=15, area_min=300, area_max=50000,
-                 thr_d=35, thr_t=0.3, thr_s=0.45, cameras=None):
+                 thr_d=35, thr_t=0.4, thr_s=0.45, cameras=None):
         # captures
         if captures is None:
             self.__captures = [cv2.VideoCapture(0)]  # the default setting is the internal camera only
@@ -251,6 +251,7 @@ class MyDetector:
         an interface for users -- a warp function
         """
         self.__init_background()
+        flag_s = False
         while True:
             if not self.__read():
                 cv2.destroyAllWindows()
@@ -258,9 +259,14 @@ class MyDetector:
             # TODO: update the background periodically
             # self.__update_background()
             self.show()
-            key = cv2.waitKey(self.__wT)
+            if flag_s:
+                key = cv2.waitKey(0)
+            else:
+                key = cv2.waitKey(self.__wT)
             if key == 27:  # press Esc to exit
                 cv2.destroyAllWindows()
                 break
-            elif key == 112:  # press p to pause
-                cv2.waitKey(0)  # press any key to continue
+            elif key == 112:        # press p to pause
+                cv2.waitKey(0)      # press any key to continue
+            elif key == 115:
+                flag_s = not flag_s
