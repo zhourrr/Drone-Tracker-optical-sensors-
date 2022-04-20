@@ -72,7 +72,7 @@ class MyDetector:
         else:
             self.__roi_info = roi
         self.__mask = [None] * self.num_cameras
-        self.__background = [None] * self.num_cameras
+        self.__background = []
         self.__candidates = []
         for i in range(self.num_cameras):
             self.__candidates.append([])
@@ -115,7 +115,7 @@ class MyDetector:
                 ret, temp_frame = self.__captures[capture].read()
                 init_frames[capture].append(self.__get_roi(temp_frame, capture))
         for capture in range(self.num_cameras):
-            self.__background[capture] = np.median(init_frames[capture], axis=0).astype(dtype=np.uint8)
+            self.__background.append(np.median(init_frames[capture], axis=0).astype(dtype=np.uint8))
 
     def __update_background(self):
         """
@@ -199,8 +199,8 @@ class MyDetector:
         for capture in range(self.num_cameras):
             ids = self.__trackers[capture].track(self.__cur_objects[capture])
             for id_t, x_t, y_t, w_t, h_t in ids:
-                cv2.putText(self.roi[capture], str(id_t), (x_t, y_t + h_t + 15), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
-            self.__trackers[capture].show_kf(self.roi[capture])
+                cv2.putText(self.roi[capture], str(id_t), (x_t, y_t + h_t + 15), cv2.FONT_HERSHEY_PLAIN,
+                            2, (255, 0, 0), 2)
 
         if len(self.__cur_objects[0]) != 1 or len(self.__cur_objects[1]) != 1:
             pass
