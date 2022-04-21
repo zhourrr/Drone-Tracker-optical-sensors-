@@ -4,6 +4,7 @@ This file is the implementation of object detector
 
 import cv2
 import numpy as np
+
 from tracker import MyTracker
 from posi import *
 
@@ -47,7 +48,7 @@ class MyDetector:
     """
 
     def __init__(self, captures=None, roi=None, wt=15, area_min=300, area_max=50000,
-                 thr_d=20, thr_t=0.45, thr_s=0.45, cameras=None):
+                 thr_d=35, thr_t=0.45, thr_s=0.45, cameras=None):
         # captures
         if captures is None:
             self.__captures = [cv2.VideoCapture(0)]  # the default setting is the internal camera only
@@ -131,6 +132,34 @@ class MyDetector:
                 self.__candidates[capture] = []
             self.__bg_counter = 0
 
+    def __remove_background(self):
+        """
+        process rois and remove backgrounds
+        """
+        for capture in range(self.num_cameras):
+            # background subtraction
+            d_frame = cv2.absdiff(self.roi[capture], self.__background[capture])
+            # blur the image, remove noises, parameters: kernel size, standard deviation
+            b_frame = cv2.GaussianBlur(d_frame, (5, 5), 0)
+            # thresholding
+            t_frame = self.__rgb_threshold(b_frame)
+            # morphological processing
+            kernel = np.ones((7, 7), np.uint8)
+            m_frame = cv2.morphologyEx(t_frame, cv2.MORPH_OPEN, kernel)
+            #m_frame = cv2.morphologyEx(m_frame, cv2.MORPH_CLOSE, kernel)
+            self.__mask[capture] = m_frame
+
+    def __rgb_threshold(self, diff_img):
+        """
+        this function thresholds an RGB image and returns the resultant image
+        """
+        _, t_image_1 = cv2.threshold(diff_img[:, :, 0], self.__threshold, 255, cv2.THRESH_BINARY)
+        _, t_image_2 = cv2.threshold(diff_img[:, :, 1], self.__threshold, 255, cv2.THRESH_BINARY)
+        _, t_image_3 = cv2.threshold(diff_img[:, :, 2], self.__threshold, 255, cv2.THRESH_BINARY)
+        temp = cv2.bitwise_or(t_image_1, t_image_2)
+        res = cv2.bitwise_or(temp, t_image_3)
+        return res
+
     def __read(self):
         """
         read rois from current frames from cameras, store
@@ -150,23 +179,6 @@ class MyDetector:
         # consult the tracking unit
         self.__track()
         return True
-
-    def __remove_background(self):
-        """
-        process rois and remove backgrounds
-        """
-        for capture in range(self.num_cameras):
-            g_background = cv2.cvtColor(self.__background[capture], cv2.COLOR_BGR2GRAY)
-            g_frame = cv2.cvtColor(self.roi[capture], cv2.COLOR_BGR2GRAY)  # convert current frame to grayscale
-            d_frame = cv2.absdiff(g_frame, g_background)  # remove background
-            # blur the image, remove noises, parameters: kernel size, standard deviation
-            b_frame = cv2.GaussianBlur(d_frame, (5, 5), 0)
-            # thresholding
-            _, t_frame = cv2.threshold(b_frame, self.__threshold, 255, cv2.THRESH_BINARY)
-            # morphological processing
-            #kernel = np.ones((17, 17), np.uint8)
-            #t_frame = cv2.morphologyEx(t_frame, cv2.MORPH_CLOSE, kernel)
-            self.__mask[capture] = t_frame
 
     def __get_contours(self):
         """
@@ -256,6 +268,8 @@ class MyDetector:
         while True:
             if not self.__read():
                 cv2.destroyAllWindows()
+                for capture in range(self.num_cameras):
+                    self.__cameras[capture].release()
                 break
             # TODO: update the background periodically
             # self.__update_background()
@@ -266,6 +280,8 @@ class MyDetector:
                 key = cv2.waitKey(self.__wT)
             if key == 27:  # press Esc to exit
                 cv2.destroyAllWindows()
+                for capture in range(self.num_cameras):
+                    self.__cameras[capture].release()
                 break
             elif key == 112:        # press p to pause
                 cv2.waitKey(0)      # press any key to continue

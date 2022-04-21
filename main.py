@@ -11,7 +11,7 @@ from animation import *
 
 Cam1 = Camera(cam_center=np.array([0, 50, 0]), angle_degree=20)
 Cam2 = Camera(cam_center=np.array([14, 50, 0]), angle_degree=40)
-my_ins = MyDetector(captures=[1, 0], cameras=[Cam1, Cam2], wt=30)
+my_ins = MyDetector(captures=["test3.mp4"], cameras=[Cam1, Cam2], wt=30)
 my_ins.detect()
 
 
