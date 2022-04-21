@@ -9,9 +9,9 @@ import matplotlib.animation as animation
 from animation import *
 
 
-Cam1 = Camera(cam_center=np.array([0, 50, 0]), angle_degree=40)
+Cam1 = Camera(cam_center=np.array([0, 50, 0]), angle_degree=20)
 Cam2 = Camera(cam_center=np.array([14, 50, 0]), angle_degree=40)
-my_ins = MyDetector(captures=[0, 1], cameras=[Cam1, Cam2], wt=40)
+my_ins = MyDetector(captures=["test2.mp4"], cameras=[Cam1, Cam2], wt=30)
 my_ins.detect()
 
 
@@ -42,7 +42,7 @@ ax.set_title('3D Test')
 '''
 interval is the speed of each step
 '''
-line_ani = animation.FuncAnimation(fig, update_lines, len(my_ins.trajectory_opt), fargs=(data, lines),
+line_ani = animation.FuncAnimation(fig, update_lines, len(my_ins.trajectory), fargs=(data, lines),
                                    interval=200, blit=False)
 
 plt.show()

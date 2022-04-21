@@ -47,7 +47,7 @@ class MyDetector:
     """
 
     def __init__(self, captures=None, roi=None, wt=15, area_min=300, area_max=50000,
-                 thr_d=35, thr_t=0.4, thr_s=0.45, cameras=None):
+                 thr_d=50, thr_t=0.45, thr_s=0.45, cameras=None):
         # captures
         if captures is None:
             self.__captures = [cv2.VideoCapture(0)]  # the default setting is the internal camera only
@@ -197,24 +197,25 @@ class MyDetector:
         """
         # for now, track single object only
         for capture in range(self.num_cameras):
+            self.__trackers[capture].show_old(self.roi[capture])
             ids = self.__trackers[capture].track(self.__cur_objects[capture])
             for id_t, x_t, y_t, w_t, h_t in ids:
-                cv2.putText(self.roi[capture], str(id_t), (x_t, y_t + h_t + 15), cv2.FONT_HERSHEY_PLAIN,
-                            2, (255, 0, 0), 2)
+                cv2.putText(self.roi[capture], str(id_t), (x_t, y_t - 15), cv2.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
+            self.__trackers[capture].show_kf(self.roi[capture])
 
-        if len(self.__cur_objects[0]) != 1 or len(self.__cur_objects[1]) != 1:
-            pass
-        else:
-            x0 = self.__cur_objects[0][0][0] + self.__cur_objects[0][0][2] / 2
-            y0 = self.__cur_objects[0][0][1] + self.__cur_objects[0][0][3] / 2
-            x1 = self.__cur_objects[1][0][0] + self.__cur_objects[1][0][2] / 2
-            y1 = self.__cur_objects[1][0][1] + self.__cur_objects[1][0][3] / 2
-            m = Model([self.__cameras[0], self.__cameras[1]])
-            pos_3d = m.get_coord_basic([(x0, y0), (x1, y1)])
-            if pos_3d[2] >= 0:
-                print("position error")
-            else:
-                self.trajectory.append(pos_3d)
+        # if len(self.__cur_objects[0]) != 1 or len(self.__cur_objects[1]) != 1:
+        #     pass
+        # else:
+        #     x0 = self.__cur_objects[0][0][0] + self.__cur_objects[0][0][2] / 2
+        #     y0 = self.__cur_objects[0][0][1] + self.__cur_objects[0][0][3] / 2
+        #     x1 = self.__cur_objects[1][0][0] + self.__cur_objects[1][0][2] / 2
+        #     y1 = self.__cur_objects[1][0][1] + self.__cur_objects[1][0][3] / 2
+        #     m = Model([self.__cameras[0], self.__cameras[1]])
+        #     pos_3d = m.get_coord_basic([(x0, y0), (x1, y1)])
+        #     if pos_3d[2] >= 0:
+        #         print("position error")
+        #     else:
+        #         self.trajectory.append(pos_3d)
 
     def __similarity_compare(self, img1, img2):
         """
