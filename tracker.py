@@ -244,4 +244,6 @@ class MyTracker:
             overlap = 0.0
         # union area
         union = area1 + area2 - overlap
+        if union == 0:
+            return 0
         return overlap / union

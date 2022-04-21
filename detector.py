@@ -47,7 +47,7 @@ class MyDetector:
     """
 
     def __init__(self, captures=None, roi=None, wt=15, area_min=300, area_max=50000,
-                 thr_d=50, thr_t=0.45, thr_s=0.45, cameras=None):
+                 thr_d=20, thr_t=0.45, thr_s=0.45, cameras=None):
         # captures
         if captures is None:
             self.__captures = [cv2.VideoCapture(0)]  # the default setting is the internal camera only
@@ -164,8 +164,8 @@ class MyDetector:
             # thresholding
             _, t_frame = cv2.threshold(b_frame, self.__threshold, 255, cv2.THRESH_BINARY)
             # morphological processing
-            kernel = np.ones((17, 17), np.uint8)
-            t_frame = cv2.morphologyEx(t_frame, cv2.MORPH_CLOSE, kernel)
+            #kernel = np.ones((17, 17), np.uint8)
+            #t_frame = cv2.morphologyEx(t_frame, cv2.MORPH_CLOSE, kernel)
             self.__mask[capture] = t_frame
 
     def __get_contours(self):
@@ -197,11 +197,11 @@ class MyDetector:
         """
         # for now, track single object only
         for capture in range(self.num_cameras):
-            self.__trackers[capture].show_old(self.roi[capture])
+            #self.__trackers[capture].show_old(self.roi[capture])
             ids = self.__trackers[capture].track(self.__cur_objects[capture])
             for id_t, x_t, y_t, w_t, h_t in ids:
                 cv2.putText(self.roi[capture], str(id_t), (x_t, y_t - 15), cv2.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
-            self.__trackers[capture].show_kf(self.roi[capture])
+            #self.__trackers[capture].show_kf(self.roi[capture])
 
         # if len(self.__cur_objects[0]) != 1 or len(self.__cur_objects[1]) != 1:
         #     pass
