@@ -3,7 +3,6 @@ This file is the implementation of object detector
 """
 
 import cv2
-import numpy as np
 
 from tracker import MyTracker
 from posi import *
@@ -21,9 +20,9 @@ class MyDetector:
         waitTime:   a number in the unit of millisecond
         area_min:   the smallest area of a detected contour
         area_max:   the largest area of a detected contour
-        thr_d:      the threshold for background subtraction
-        thr_t:      the threshold for IOU tracker
-        thr_s:      the threshold for similarity comparison
+        thr_d:      the threshold for background subtraction (difference)
+        thr_t:      the threshold for IOU tracker (tracker)
+        thr_s:      the threshold for similarity comparison (similarity)
         cameras:    a list, which contains camera objects
 
     Class Variables:
@@ -38,58 +37,56 @@ class MyDetector:
         __area_max:     the largest area of a detected contour
         __area_min:     the smallest area of a detected contour
         __threshold:    the threshold for background subtraction
-        __trackers:     a list, which contains tracking units for each camera
         __cur_objects:  a list, which stores currently detected objects
         __similarity:   a constant threshold for similarity comparison
 
         num_cameras:    the number of cameras
         roi:            a list, which stores roi of each frame from each camera
         trajectory:     a dictionary, which stores trajectories of detected objects
+        trackers:       a list, which contains tracking units for each camera
     """
 
-    def __init__(self, captures=None, roi=None, wt=15, area_min=300, area_max=50000,
-                 thr_d=35, thr_t=0.45, thr_s=0.45, cameras=None):
+    def __init__(self, captures=None, roi=None, wt=15, area_min=500, area_max=50000, cameras=None):
         # captures
         if captures is None:
-            self.__captures = [cv2.VideoCapture(0)]  # the default setting is the internal camera only
+            # the default setting is the internal camera only, however, the file descriptor for the internal
+            # camera in different operating systems might differ
+            self.__captures = [cv2.VideoCapture(0)]
         else:
             self.__captures = []
             for capture in captures:
                 self.__captures.append(cv2.VideoCapture(capture))
+        # record the total number of cameras
         self.num_cameras = len(self.__captures)
-        # cameras
         self.__cameras = []
-        if cameras is None:
-            for i in range(self.num_cameras):
-                self.__cameras.append(Camera())
-        else:
-            for i in range(self.num_cameras):
-                self.__cameras.append(cameras[i])
-        # roi
-        if roi is None:
-            self.__roi_info = []
-            for i in range(self.num_cameras):
-                self.__roi_info.append(None)
-        else:
-            self.__roi_info = roi
-        self.__mask = [None] * self.num_cameras
+        self.__roi_info = []
         self.__background = []
         self.__candidates = []
+        self.__mask = [None] * self.num_cameras
+        self.__cur_objects = []
         for i in range(self.num_cameras):
+            # instantiate cameras
+            if cameras is None:
+                self.__cameras.append(Camera())
+            else:
+                self.__cameras.append(cameras[i])
+            # roi
+            if roi is None:
+                self.__roi_info.append(None)
+            else:
+                self.__roi_info.append(roi[i])
+            # background candidates
             self.__candidates.append([])
+            # one detected object list for each camera
+            self.__cur_objects.append([])
         self.__bg_counter = 0
         self.__wT = wt
         self.__area_max = area_max
         self.__area_min = area_min
-        self.__threshold = thr_d
-        self.__trackers = []
-        for i in range(self.num_cameras):
-            self.__trackers.append(MyTracker(thr_t))
-        self.__cur_objects = []
-        for i in range(self.num_cameras):
-            self.__cur_objects.append([])
-        self.__similarity = thr_s
+        self.__threshold = 30
+        self.__similarity = 0.35
         self.roi = [None] * self.num_cameras
+        self.trackers = []
         self.trajectory = []
 
     def __get_roi(self, frame, camera_idx):
@@ -111,7 +108,7 @@ class MyDetector:
         init_frames = [] * self.num_cameras
         for i in range(self.num_cameras):
             init_frames.append([])
-        for num in range(30):  # use the first 30 frames as background
+        for num in range(30):                                       # use the first 30 frames as background
             for capture in range(self.num_cameras):
                 ret, temp_frame = self.__captures[capture].read()
                 init_frames[capture].append(self.__get_roi(temp_frame, capture))
@@ -124,9 +121,9 @@ class MyDetector:
         upper limit, i.e., the number of candidates is enough, updates the background
         """
         for capture in range(self.num_cameras):
-            self.__candidates[capture].append(self.roi[capture])  # add the current roi to the candidate list
+            self.__candidates[capture].append(self.roi[capture])    # add the current roi to the candidate list
         self.__bg_counter += 1
-        if self.__bg_counter == 30:  # reached the upper limit
+        if self.__bg_counter == 30:                                 # reached the upper limit
             for capture in range(self.num_cameras):
                 self.__background[capture] = np.median(self.__candidates[capture], axis=0).astype(dtype=np.uint8)
                 self.__candidates[capture] = []
@@ -140,13 +137,14 @@ class MyDetector:
             # background subtraction
             d_frame = cv2.absdiff(self.roi[capture], self.__background[capture])
             # blur the image, remove noises, parameters: kernel size, standard deviation
-            b_frame = cv2.GaussianBlur(d_frame, (5, 5), 0)
+            b_frame = cv2.GaussianBlur(d_frame, (9, 9), 0)
             # thresholding
             t_frame = self.__rgb_threshold(b_frame)
             # morphological processing
-            kernel = np.ones((7, 7), np.uint8)
-            m_frame = cv2.morphologyEx(t_frame, cv2.MORPH_OPEN, kernel)
-            #m_frame = cv2.morphologyEx(m_frame, cv2.MORPH_CLOSE, kernel)
+            kernel_o = np.ones((13, 13), np.uint8)
+            kernel_c = np.ones((5, 5), np.uint8)
+            m_frame = cv2.morphologyEx(t_frame, cv2.MORPH_OPEN, kernel_o)
+            m_frame = cv2.morphologyEx(m_frame, cv2.MORPH_CLOSE, kernel_c)
             self.__mask[capture] = m_frame
 
     def __rgb_threshold(self, diff_img):
@@ -159,26 +157,6 @@ class MyDetector:
         temp = cv2.bitwise_or(t_image_1, t_image_2)
         res = cv2.bitwise_or(temp, t_image_3)
         return res
-
-    def __read(self):
-        """
-        read rois from current frames from cameras, store
-        them into class variables frames and roi, then
-        apply background subtraction
-        """
-        # read frames
-        for capture in range(self.num_cameras):
-            ret, temp_frame = self.__captures[capture].read()
-            if not ret:
-                return ret
-            self.roi[capture] = self.__get_roi(temp_frame, capture)
-        # remove background and get the masks
-        self.__remove_background()
-        # find contours
-        self.__get_contours()
-        # consult the tracking unit
-        self.__track()
-        return True
 
     def __get_contours(self):
         """
@@ -200,20 +178,25 @@ class MyDetector:
                     # check if this object is similar to the background, reduce the impact of shaking
                     if self.__similarity_compare(obj, bg):
                         continue
+                    # shape detection, remove irregular objects
+                    if w > 1.7 * h or h > 1.7 * w:
+                        continue
                     self.__cur_objects[capture].append((x, y, w, h))
-                    cv2.rectangle(self.roi[capture], (x, y), (x + w, y + h), (0, 255, 0), 3)
 
     def __track(self):
         """
         track detected objects and store their trajectories
         """
-        # for now, track single object only
         for capture in range(self.num_cameras):
-            #self.__trackers[capture].show_old(self.roi[capture])
-            ids = self.__trackers[capture].track(self.__cur_objects[capture])
+            # display previously detected objects
+            # self.trackers[capture].show_old(self.roi[capture])
+            ids = self.trackers[capture].track(self.__cur_objects[capture], self.roi[capture])
             for id_t, x_t, y_t, w_t, h_t in ids:
-                cv2.putText(self.roi[capture], str(id_t), (x_t, y_t - 15), cv2.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
-            #self.__trackers[capture].show_kf(self.roi[capture])
+                cv2.rectangle(self.roi[capture], (x_t, y_t), (x_t + w_t, y_t + h_t), (0, 255, 0), 3)
+                cv2.putText(self.roi[capture], str(id_t), (int(x_t + w_t / 2 - 3), y_t - 15), cv2.FONT_HERSHEY_PLAIN,
+                            2, (0, 255, 0), 2)
+            # display Kalman filter predictions
+            self.trackers[capture].show_kf(self.roi[capture])
 
         # if len(self.__cur_objects[0]) != 1 or len(self.__cur_objects[1]) != 1:
         #     pass
@@ -251,13 +234,40 @@ class MyDetector:
         else:
             return False
 
-    def show(self):
+    def __read(self):
+        """
+        read rois from current frames from cameras, store
+        them into class variables frames and roi, then
+        apply background subtraction
+        """
+        # read frames
+        for capture in range(self.num_cameras):
+            ret, temp_frame = self.__captures[capture].read()
+            if not ret:
+                return ret
+            self.roi[capture] = self.__get_roi(temp_frame, capture)
+        # remove background and get the masks
+        self.__remove_background()
+        # find contours
+        self.__get_contours()
+        # consult the tracking unit
+        self.__track()
+        return True
+
+    def __show(self):
         """
         displays real-time videos with detected objects
         """
         for camera in range(self.num_cameras):
             cv2.imshow("camera " + str(camera + 1), self.roi[camera])
             cv2.imshow("mask " + str(camera + 1), self.__mask[camera])
+
+    def tracker_init(self, coordinator):
+        """
+        this function instantiates and initializes trackers for each camera
+        """
+        for i in range(self.num_cameras):
+            self.trackers.append(MyTracker(i, coordinator, 0.45))
 
     def detect(self):
         """
@@ -269,11 +279,11 @@ class MyDetector:
             if not self.__read():
                 cv2.destroyAllWindows()
                 for capture in range(self.num_cameras):
-                    self.__cameras[capture].release()
+                    self.__captures[capture].release()
                 break
             # TODO: update the background periodically
             # self.__update_background()
-            self.show()
+            self.__show()
             if flag_s:
                 key = cv2.waitKey(0)
             else:
@@ -281,7 +291,7 @@ class MyDetector:
             if key == 27:  # press Esc to exit
                 cv2.destroyAllWindows()
                 for capture in range(self.num_cameras):
-                    self.__cameras[capture].release()
+                    self.__captures[capture].release()
                 break
             elif key == 112:        # press p to pause
                 cv2.waitKey(0)      # press any key to continue
