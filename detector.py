@@ -1,7 +1,3 @@
-"""
-This file is the implementation of object detector
-"""
-
 import cv2
 
 from tracker import MyTracker
@@ -20,11 +16,7 @@ class MyDetector:
         waitTime:   a number in the unit of millisecond
         area_min:   the smallest area of a detected contour
         area_max:   the largest area of a detected contour
-        thr_d:      the threshold for background subtraction (difference)
-        thr_t:      the threshold for IOU tracker (tracker)
-        thr_s:      the threshold for similarity comparison (similarity)
         cameras:    a list, which contains camera objects
-
     Class Variables:
         __captures:     a list, which stores VideoCapture for each camera
         __cameras:      a list, which stores Camera objects
@@ -39,15 +31,13 @@ class MyDetector:
         __threshold:    the threshold for background subtraction
         __cur_objects:  a list, which stores currently detected objects
         __similarity:   a constant threshold for similarity comparison
-
         num_cameras:    the number of cameras
         roi:            a list, which stores roi of each frame from each camera
-        trajectory:     a dictionary, which stores trajectories of detected objects
         trackers:       a list, which contains tracking units for each camera
     """
 
     def __init__(self, captures=None, roi=None, wt=15, area_min=500, area_max=50000, cameras=None):
-        # captures
+        # video captures
         if captures is None:
             # the default setting is the internal camera only, however, the file descriptor for the internal
             # camera in different operating systems might differ
@@ -88,7 +78,6 @@ class MyDetector:
         self.__flag_s = False
         self.roi = [None] * self.num_cameras
         self.trackers = []
-        self.trajectory = []
 
     def __get_roi(self, frame, camera_idx):
         """
@@ -180,7 +169,7 @@ class MyDetector:
                     if self.__similarity_compare(obj, bg):
                         continue
                     # shape detection, remove irregular objects
-                    if w > 1.7 * h or h > 1.7 * w:
+                    if w > 2.5 * h or h > 2.5 * w:
                         continue
                     self.__cur_objects[capture].append((x, y, w, h))
 
@@ -272,6 +261,7 @@ class MyDetector:
         # TODO: update the background periodically
         # self.__update_background()
         self.__show()
+        # keyboard interrupt
         if self.__flag_s:
             key = cv2.waitKey(0)
         else:
