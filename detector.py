@@ -85,6 +85,7 @@ class MyDetector:
         self.__area_min = area_min
         self.__threshold = 30
         self.__similarity = 0.35
+        self.__flag_s = False
         self.roi = [None] * self.num_cameras
         self.trackers = []
         self.trajectory = []
@@ -101,7 +102,7 @@ class MyDetector:
         right_bottom = self.__roi_info[camera_idx][3]
         return frame[left_top:right_top, left_bottom:right_bottom]
 
-    def __init_background(self):
+    def init_background(self):
         """
         use the initial frames as the backgrounds
         """
@@ -187,30 +188,19 @@ class MyDetector:
         """
         track detected objects and store their trajectories
         """
+        objects = []
         for capture in range(self.num_cameras):
             # display previously detected objects
             # self.trackers[capture].show_old(self.roi[capture])
-            ids = self.trackers[capture].track(self.__cur_objects[capture], self.roi[capture])
-            for id_t, x_t, y_t, w_t, h_t in ids:
+            objects_id = self.trackers[capture].track(self.__cur_objects[capture], self.roi[capture])
+            for id_t, x_t, y_t, w_t, h_t in objects_id:
                 cv2.rectangle(self.roi[capture], (x_t, y_t), (x_t + w_t, y_t + h_t), (0, 255, 0), 3)
                 cv2.putText(self.roi[capture], str(id_t), (int(x_t + w_t / 2 - 3), y_t - 15), cv2.FONT_HERSHEY_PLAIN,
                             2, (0, 255, 0), 2)
+            objects.append(objects_id)
             # display Kalman filter predictions
             self.trackers[capture].show_kf(self.roi[capture])
-
-        # if len(self.__cur_objects[0]) != 1 or len(self.__cur_objects[1]) != 1:
-        #     pass
-        # else:
-        #     x0 = self.__cur_objects[0][0][0] + self.__cur_objects[0][0][2] / 2
-        #     y0 = self.__cur_objects[0][0][1] + self.__cur_objects[0][0][3] / 2
-        #     x1 = self.__cur_objects[1][0][0] + self.__cur_objects[1][0][2] / 2
-        #     y1 = self.__cur_objects[1][0][1] + self.__cur_objects[1][0][3] / 2
-        #     m = Model([self.__cameras[0], self.__cameras[1]])
-        #     pos_3d = m.get_coord_basic([(x0, y0), (x1, y1)])
-        #     if pos_3d[2] >= 0:
-        #         print("position error")
-        #     else:
-        #         self.trajectory.append(pos_3d)
+        return tuple(objects)
 
     def __similarity_compare(self, img1, img2):
         """
@@ -251,8 +241,8 @@ class MyDetector:
         # find contours
         self.__get_contours()
         # consult the tracking unit
-        self.__track()
-        return True
+        objects = self.__track()
+        return objects
 
     def __show(self):
         """
@@ -273,27 +263,26 @@ class MyDetector:
         """
         an interface for users -- a warp function
         """
-        self.__init_background()
-        flag_s = False
-        while True:
-            if not self.__read():
-                cv2.destroyAllWindows()
-                for capture in range(self.num_cameras):
-                    self.__captures[capture].release()
-                break
-            # TODO: update the background periodically
-            # self.__update_background()
-            self.__show()
-            if flag_s:
-                key = cv2.waitKey(0)
-            else:
-                key = cv2.waitKey(self.__wT)
-            if key == 27:  # press Esc to exit
-                cv2.destroyAllWindows()
-                for capture in range(self.num_cameras):
-                    self.__captures[capture].release()
-                break
-            elif key == 112:        # press p to pause
-                cv2.waitKey(0)      # press any key to continue
-            elif key == 115:
-                flag_s = not flag_s
+        res = self.__read()
+        if not res:
+            cv2.destroyAllWindows()
+            for capture in range(self.num_cameras):
+                self.__captures[capture].release()
+            return False
+        # TODO: update the background periodically
+        # self.__update_background()
+        self.__show()
+        if self.__flag_s:
+            key = cv2.waitKey(0)
+        else:
+            key = cv2.waitKey(self.__wT)
+        if key == 27:  # press Esc to exit
+            cv2.destroyAllWindows()
+            for capture in range(self.num_cameras):
+                self.__captures[capture].release()
+            return False
+        elif key == 112:        # press p to pause
+            cv2.waitKey(0)      # press any key to continue
+        elif key == 115:
+            self.__flag_s = not self.__flag_s
+        return res
