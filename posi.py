@@ -99,7 +99,7 @@ class Locate:
             # print(path)
         
         # path_step is the total length of all path
-        print(self.id_color)
+        # print(self.id_color)
         self.path_step += 1
         self.img_show([path,pos_3d])
 
