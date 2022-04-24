@@ -1,11 +1,14 @@
+import matplotlib.pyplot as plt
+
 from detector import *
 from posi import *
 from animation import *
 from coordinator import *
+%matplotlib
 
 Cam1 = Camera(cam_center=np.array([-10, 50, 0]), angle_degree=100)
 Cam2 = Camera(cam_center=np.array([10, 50, 0]), angle_degree=100)
-detector = MyDetector(captures=[0, 1], cameras=[Cam1, Cam2], wt=30)
+detector = MyDetector(captures=["test.mp4", "test1.mp4"], cameras=[Cam1, Cam2], wt=30)
 coordinator = Coordinator(detector)
 detector.tracker_init(coordinator)
 detector.init_background()
@@ -19,7 +22,7 @@ while True:
     if not res:
         break
     else:
-        locate.locate(pos_model,res)
+        locate.locate(pos_model, res)
 
 # decompress the path for animation
 path = decompress_path(locate.trajectory,locate.path_step)
@@ -53,4 +56,4 @@ ax.set_title('3D Test')
 line_ani = animation.FuncAnimation(fig, update_lines, locate.path_step, fargs=(data, lines),
                                     interval=80, blit=False)
 
-plt.show()
+plt.show(10)
