@@ -6,15 +6,17 @@ Created on Thu Mar 31 21:17:18 2022
 """
 
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+
 
 class Ray:
     def __init__(self, origin = np.array([]), direction = np.array([])):
         self.origin = origin
         self.direction = direction
+
     def pointAtT(self, t):
         return self.origin + self.direction * t
+
 
 class Camera:
     def __init__(self, width = 480, height = 640, front = np.array([0, 0, -1]), up = np.array([0, 1, 0]), cam_center = np.array([0, 0, 0]), offset = 0, angle_degree = 61):
@@ -28,11 +30,10 @@ class Camera:
         self.height = height
     
     def get_ray(self, x, y):
-        ### how to count pixel position ? 
+        # how to count pixel position ?
         ray_dir = self.front * self.dist_e2s + self.right * (x + 0.5 - self.width / 2) / self.width - self.up * (y + 0.5 - self.height / 2) / self.width
         ray_dir /= np.linalg.norm(ray_dir)
         return Ray(self.e, ray_dir)
-    
 
 
 class Model:
@@ -46,7 +47,7 @@ class Model:
         ray_list = [None] * self.n_cam
         for i in range(self.n_cam):
             ray_list[i] = self.cameras[i].get_ray(pixel_pos_tuple_list[i][0],pixel_pos_tuple_list[i][1])
-        ### now only consider 2-cam situation
+        # now only consider 2-cam situation
         Ray1 = ray_list[0]
         Ray2 = ray_list[1]
         n = np.cross(Ray1.direction, Ray2.direction)
@@ -68,22 +69,22 @@ class Locate:
         self.camera_pos = [20,50]
         self.path_step = 0
         
-    def locate(self,m,ids):
+    def locate(self, m, ids):
             
-        if (len(ids[0])==0) or (len(ids[1])==0):
+        if (len(ids[0]) == 0) or (len(ids[1]) == 0):
             return
         
-        #check if the same id appear in both tracker. 
+        # check if the same id appear in both tracker.
         path = [] 
         for id1 in ids[0]:
             for id2 in ids[1]:
-                if  id2[0] == id1[0]:
+                if id2[0] == id1[0]:
                     path.append([id1,id2])
-                    #give each id a different color for plotting (but we just have 6 colors)
+                    # give each id a different color for plotting (but we just have 6 colors)
                     if id1[0] not in self.id_color.keys():
                         self.id_color[id1[0]] = self.plt_color[self.color_index%6]
                         self.color_index += 1
-        #pos_3d store the position of each object in one frame
+        # pos_3d store the position of each object in one frame
         pos_3d = [0]*len(path)
         for i in range(len(path)):
             x0 = path[i][0][1] + path[i][0][3]/ 2
@@ -95,9 +96,9 @@ class Locate:
                 print("position error")
             else:
                 self.trajectory.append([path[i][0][0],pos_3d[i],self.path_step])
-            #print(path)
+            # print(path)
         
-        #path_step is the total length of all path
+        # path_step is the total length of all path
         print(self.id_color)
         self.path_step += 1
         self.img_show([path,pos_3d])
@@ -115,66 +116,44 @@ class Locate:
         if self.img_counter % 50 == 0:
             plt.cla()
         g_xy = plt.subplot(1, 2, 1) 
-        plt.plot(-self.camera_pos[0]/2,self.camera_pos[1],"bo")
-        plt.plot(self.camera_pos[0]/2,self.camera_pos[1],"bo") 
+        plt.plot(-self.camera_pos[0]/2, self.camera_pos[1], "bo")
+        plt.plot(self.camera_pos[0]/2, self.camera_pos[1], "bo")
         
         if len(path) == 1:
-            plt.plot(path[0][0],path[0][1],self.id_color[ids[0][0][0]])
+            plt.plot(path[0][0], path[0][1], self.id_color[ids[0][0][0]])
             
         elif len(path) == 2:
-            plt.plot(path[0][0],path[0][1],self.id_color[ids[0][0][0]])
-            plt.plot(path[1][0],path[1][1],self.id_color[ids[1][0][0]])
+            plt.plot(path[0][0], path[0][1], self.id_color[ids[0][0][0]])
+            plt.plot(path[1][0], path[1][1], self.id_color[ids[1][0][0]])
             
         elif len(path) == 3:
-            plt.plot(path[0][0],path[0][1],self.id_color[ids[0][0][0]])
-            plt.plot(path[1][0],path[1][1],self.id_color[ids[1][0][0]])
-            plt.plot(path[2][0],path[2][1],self.id_color[ids[2][0][0]])
+            plt.plot(path[0][0], path[0][1], self.id_color[ids[0][0][0]])
+            plt.plot(path[1][0], path[1][1], self.id_color[ids[1][0][0]])
+            plt.plot(path[2][0], path[2][1], self.id_color[ids[2][0][0]])
         
-        plt.xlim([-20,20])
-        plt.ylim([0,100])
+        plt.xlim([-20, 20])
+        plt.ylim([0, 100])
         plt.ylabel('hight')
         plt.xlabel('x')
         
         if self.img_counter % 50 == 0:
             plt.cla()
         g_xz = plt.subplot(1, 2, 2)
-        plt.plot(-self.camera_pos[0]/2,0,"bo")
-        plt.plot(self.camera_pos[0]/2,0,"bo")
+        plt.plot(-self.camera_pos[0]/2, 0, "bo")
+        plt.plot(self.camera_pos[0]/2, 0, "bo")
         
         if len(path) == 1:
-            plt.plot(path[0][0],-path[0][2], self.id_color[ids[0][0][0]])
+            plt.plot(path[0][0], -path[0][2], self.id_color[ids[0][0][0]])
         elif len(path) == 2:  
-            plt.plot(path[0][0],-path[0][2], self.id_color[ids[0][0][0]])
-            plt.plot(path[1][0],-path[1][2], self.id_color[ids[1][0][0]])
+            plt.plot(path[0][0], -path[0][2], self.id_color[ids[0][0][0]])
+            plt.plot(path[1][0], -path[1][2], self.id_color[ids[1][0][0]])
         elif len(path) == 3:
-            plt.plot(path[0][0],-path[0][2], self.id_color[ids[0][0][0]])
-            plt.plot(path[1][0],-path[1][2], self.id_color[ids[1][0][0]])
-            plt.plot(path[2][0],-path[2][2], self.id_color[ids[2][0][0]])            
+            plt.plot(path[0][0], -path[0][2], self.id_color[ids[0][0][0]])
+            plt.plot(path[1 ][0], -path[1][2], self.id_color[ids[1][0][0]])
+            plt.plot(path[2][0], -path[2][2], self.id_color[ids[2][0][0]])
         
-        plt.xlim([-20,20])
-        plt.ylim([0,100])
+        plt.xlim([-20, 20])
+        plt.ylim([0, 100])
         plt.ylabel('distance')
         plt.xlabel('x')
         plt.draw()   
-
-
-
-
-
-'''
-
-Cam1 = Camera(cam_center = np.array([0, 20, 0]))
-Cam2 = Camera(cam_center = np.array([55, 20, 0]))
-
-m = Model([Cam1, Cam2])
-
-pos_3d = m.get_coord_basic([(440,193), (200,193)])
-        
-   '''     
-    
-
-    
-
-
-
-

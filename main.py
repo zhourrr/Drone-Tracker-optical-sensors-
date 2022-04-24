@@ -1,20 +1,10 @@
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
 from detector import *
 from posi import *
-import matplotlib.pyplot as plt
-import mpl_toolkits.mplot3d.axes3d as p3
-import matplotlib.animation as animation
 from animation import *
 from coordinator import *
 
 Cam1 = Camera(cam_center=np.array([-10, 50, 0]), angle_degree=100)
 Cam2 = Camera(cam_center=np.array([10, 50, 0]), angle_degree=100)
-# detector = MyDetector(captures=[0, 1], cameras=[Cam1, Cam2], wt=30)
-# coordinator = Coordinator(detector)
-# detector.tracker_init(coordinator)
-# detector.detect()
 detector = MyDetector(captures=[0, 1], cameras=[Cam1, Cam2], wt=30)
 coordinator = Coordinator(detector)
 detector.tracker_init(coordinator)
@@ -30,17 +20,9 @@ while True:
         break
     else:
         locate.locate(pos_model,res)
-                
-        #print(res)
 
-
-
-### animation
-
-
-#decompress the path for animation
+# decompress the path for animation
 path = decompress_path(locate.trajectory,locate.path_step)
-
 
 fig = plt.figure(figsize=(8, 8))
 ax = p3.Axes3D(fig)
@@ -66,7 +48,7 @@ ax.set_zlabel('Height')
 ax.set_title('3D Test')
 
 # Creating the Animation object
-#interval is the speed of each step
+# interval is the speed of each step
 
 line_ani = animation.FuncAnimation(fig, update_lines, locate.path_step, fargs=(data, lines),
                                     interval=80, blit=False)

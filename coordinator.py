@@ -78,4 +78,3 @@ class Coordinator:
             return True
         else:
             return False
-
