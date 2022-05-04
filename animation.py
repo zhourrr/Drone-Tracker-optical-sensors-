@@ -12,6 +12,10 @@ import matplotlib.animation as animation
 
 
 def decompress_path(path_info,step_num):
+    """
+     generate position information of each object(with ID)
+     through the objects return from detector  
+    """
     path_len = {}
     path_s = {}
     path_e = {}

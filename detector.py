@@ -1,5 +1,4 @@
 import cv2
-
 from tracker import MyTracker
 from posi import *
 
@@ -17,26 +16,29 @@ class MyDetector:
         area_min:   the smallest area of a detected contour
         area_max:   the largest area of a detected contour
         cameras:    a list, which contains camera objects
+        width:      frame width
+        height:     frame height
     Class Variables:
         __captures:     a list, which stores VideoCapture for each camera
         __cameras:      a list, which stores Camera objects
         __roi_info:     a list, which stores roi coordinates for each camera
         __mask:         a list, which stores processed rois
         __background:   a list, which stores the background scene of each camera
-        __candidates:   a list, which stores candidate frames for updating background scenes
-        __bg_counter:   an integer counter for updating background scenes
+        __bs:           a list, which stores opencv background subtractor for each camera
+        __cur_objects:  a list, which stores currently detected objects
         __wT:           wait time
         __area_max:     the largest area of a detected contour
         __area_min:     the smallest area of a detected contour
         __threshold:    the threshold for background subtraction
-        __cur_objects:  a list, which stores currently detected objects
         __similarity:   a constant threshold for similarity comparison
+        __flag_s:       a flag variable for video pause and continue
         num_cameras:    the number of cameras
         roi:            a list, which stores roi of each frame from each camera
         trackers:       a list, which contains tracking units for each camera
     """
 
-    def __init__(self, captures=None, roi=None, wt=15, area_min=500, area_max=50000, cameras=None):
+    def __init__(self, captures=None, roi=None, wt=15, area_min=500, area_max=50000,
+                 cameras=None, width=1920, height=1080):
         # video captures
         if captures is None:
             # the default setting is the internal camera only, however, the file descriptor for the internal
@@ -44,14 +46,16 @@ class MyDetector:
             self.__captures = [cv2.VideoCapture(0)]
         else:
             self.__captures = []
-            for capture in captures:
-                self.__captures.append(cv2.VideoCapture(capture))
-        # record the total number of cameras
-        self.num_cameras = len(self.__captures)
+            for num in range(len(captures)):
+                self.__captures.append(cv2.VideoCapture(captures[num]))
+                self.__captures[num].set(3, width)
+                self.__captures[num].set(4, height)
+                self.__captures[num].set(5, 30)
+        self.num_cameras = len(self.__captures)     # record the total number of cameras
         self.__cameras = []
         self.__roi_info = []
         self.__background = []
-        self.__candidates = []
+        self.__bs = []
         self.__mask = [None] * self.num_cameras
         self.__cur_objects = []
         for i in range(self.num_cameras):
@@ -65,15 +69,14 @@ class MyDetector:
                 self.__roi_info.append(None)
             else:
                 self.__roi_info.append(roi[i])
-            # background candidates
-            self.__candidates.append([])
+            # opencv background subtractor
+            self.__bs.append(cv2.createBackgroundSubtractorMOG2(history=3000, detectShadows=True))
             # one detected object list for each camera
             self.__cur_objects.append([])
-        self.__bg_counter = 0
         self.__wT = wt
         self.__area_max = area_max
         self.__area_min = area_min
-        self.__threshold = 30
+        self.__threshold = 20
         self.__similarity = 0.35
         self.__flag_s = False
         self.roi = [None] * self.num_cameras
@@ -95,29 +98,20 @@ class MyDetector:
         """
         use the initial frames as the backgrounds
         """
-        init_frames = [] * self.num_cameras
-        for i in range(self.num_cameras):
-            init_frames.append([])
-        for num in range(30):                                       # use the first 30 frames as background
+        for num in range(30):   # use the initial 30 frames as background scenes
             for capture in range(self.num_cameras):
                 ret, temp_frame = self.__captures[capture].read()
-                init_frames[capture].append(self.__get_roi(temp_frame, capture))
+                self.__bs[capture].apply(temp_frame)
         for capture in range(self.num_cameras):
-            self.__background.append(np.median(init_frames[capture], axis=0).astype(dtype=np.uint8))
+            self.__background.append(self.__bs[capture].getBackgroundImage())
 
     def __update_background(self):
         """
-        add current frames to the candidate list, if background counter has reached its
-        upper limit, i.e., the number of candidates is enough, updates the background
+        updates background images gradually and regularly
         """
         for capture in range(self.num_cameras):
-            self.__candidates[capture].append(self.roi[capture])    # add the current roi to the candidate list
-        self.__bg_counter += 1
-        if self.__bg_counter == 30:                                 # reached the upper limit
-            for capture in range(self.num_cameras):
-                self.__background[capture] = np.median(self.__candidates[capture], axis=0).astype(dtype=np.uint8)
-                self.__candidates[capture] = []
-            self.__bg_counter = 0
+            self.__background[capture] = self.__bs[capture].getBackgroundImage()
+        return
 
     def __remove_background(self):
         """
@@ -125,11 +119,15 @@ class MyDetector:
         """
         for capture in range(self.num_cameras):
             # background subtraction
-            d_frame = cv2.absdiff(self.roi[capture], self.__background[capture])
+            bg = self.__bs[capture].getBackgroundImage()
+            self.__bs[capture].apply(self.roi[capture])
+            d_frame = cv2.absdiff(bg, self.roi[capture])
             # blur the image, remove noises, parameters: kernel size, standard deviation
             b_frame = cv2.GaussianBlur(d_frame, (9, 9), 0)
             # thresholding
             t_frame = self.__rgb_threshold(b_frame)
+            if capture == 1:
+                cv2.imshow("test", t_frame)
             # morphological processing
             kernel_o = np.ones((13, 13), np.uint8)
             kernel_c = np.ones((5, 5), np.uint8)
@@ -169,7 +167,7 @@ class MyDetector:
                     if self.__similarity_compare(obj, bg):
                         continue
                     # shape detection, remove irregular objects
-                    if w > 2.5 * h or h > 2.5 * w:
+                    if w > 3.5 * h or h > 3.5 * w:
                         continue
                     self.__cur_objects[capture].append((x, y, w, h))
 
@@ -231,6 +229,8 @@ class MyDetector:
         self.__get_contours()
         # consult the tracking unit
         objects = self.__track()
+        # update background scenes
+        self.__update_background()
         return objects
 
     def __show(self):
@@ -250,7 +250,7 @@ class MyDetector:
 
     def detect(self):
         """
-        an interface for users -- a warp function
+        an interface for users -- a wrapper function
         """
         res = self.__read()
         if not res:
@@ -258,15 +258,13 @@ class MyDetector:
             for capture in range(self.num_cameras):
                 self.__captures[capture].release()
             return False
-        # TODO: update the background periodically
-        # self.__update_background()
         self.__show()
         # keyboard interrupt
         if self.__flag_s:
             key = cv2.waitKey(0)
         else:
             key = cv2.waitKey(self.__wT)
-        if key == 27:  # press Esc to exit
+        if key == 27:           # press Esc to exit
             cv2.destroyAllWindows()
             for capture in range(self.num_cameras):
                 self.__captures[capture].release()

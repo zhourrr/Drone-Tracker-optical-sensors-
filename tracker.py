@@ -4,7 +4,6 @@ This file is the implementation of IOU Tracker.
 
 import cv2
 import numpy as np
-
 from kalman_filter import MyKalmanFilter
 
 
