@@ -25,7 +25,7 @@ class Coordinator:
         self.__num_trackers = self.__detector.num_cameras
         self.__counter = 0
         self.__similarity = 0.6
-        self.__y_margin = 35
+        self.__y_margin = 50
 
     def assign_id(self, capture, x, y, w, h):
         """

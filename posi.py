@@ -132,7 +132,7 @@ class Locate:
         
         plt.xlim([-100,100])
         plt.ylim([0,200])
-        plt.ylabel('hight')
+        plt.ylabel('height')
         plt.xlabel('x')
         
         if self.img_counter % 50 == 0:

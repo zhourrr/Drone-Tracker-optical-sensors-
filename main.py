@@ -1,24 +1,16 @@
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
 from detector import *
 from posi import *
-import matplotlib.pyplot as plt
-import mpl_toolkits.mplot3d.axes3d as p3
-import matplotlib.animation as animation
 from animation import *
 from coordinator import *
 
+
+plt.ion()
 
 Cam_w = 640
 Cam_h = 640
 Cam1 = Camera(width=Cam_w, height=Cam_h, cam_center=np.array([-11, 50, 0]), angle_degree=70)
 Cam2 = Camera(width=Cam_w, height=Cam_h, cam_center=np.array([ 11, 50, 0]), angle_degree=70)
-# detector = MyDetector(captures=[0, 1], cameras=[Cam1, Cam2], wt=30)
-# coordinator = Coordinator(detector)
-# detector.tracker_init(coordinator)
-# detector.detect()
-detector = MyDetector(captures=["test2.mp4", "test3.mp4"], cameras=[Cam1, Cam2], wt=30 ,width=Cam_w, height=Cam_h)
+detector = MyDetector(captures=["test.mp4", "test1.mp4"], cameras=[Cam1, Cam2], wt=30, width=Cam_w, height=Cam_h)
 coordinator = Coordinator(detector)
 detector.tracker_init(coordinator)
 detector.init_background()

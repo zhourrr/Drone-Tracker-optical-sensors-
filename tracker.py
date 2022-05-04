@@ -42,6 +42,13 @@ class MyTracker:
         Outputs:
             objs_id:    a list which stores ids and other information of input objects
         """
+        num_objs = len(objs_rect)
+        # if the number of detected objects is more than 8, there are some noises in our frames
+        # assume the expected number of objects is no more than 8
+        if num_objs > 8:
+            flag_n = 1
+        else:
+            flag_n = 0
         objs_id = []
         current_objs = {}
         for x, y, w, h in objs_rect:
@@ -50,6 +57,8 @@ class MyTracker:
             if id_t == -1:                      # IOU match fails, consult the Kalman filter
                 id_t = self.__kf_match(x, y, w, h)
                 if id_t == -1:                  # not previously detected, get an id for it!
+                    if flag_n == 1:             # noise!
+                        continue
                     id_t = self.__coordinator.assign_id(self.__capture, x, y, w, h)
                     self.__kf_set(id_t, x, y, w, h)
             # multiple objects with same id! tracker fails, consult the id coordinator!

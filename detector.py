@@ -50,7 +50,7 @@ class MyDetector:
                 self.__captures.append(cv2.VideoCapture(captures[num]))
                 self.__captures[num].set(3, width)
                 self.__captures[num].set(4, height)
-                self.__captures[num].set(5, 30)
+                # self.__captures[num].set(5, 30)
         self.num_cameras = len(self.__captures)     # record the total number of cameras
         self.__cameras = []
         self.__roi_info = []
@@ -76,7 +76,7 @@ class MyDetector:
         self.__wT = wt
         self.__area_max = area_max
         self.__area_min = area_min
-        self.__threshold = 20
+        self.__threshold = 30
         self.__similarity = 0.35
         self.__flag_s = False
         self.roi = [None] * self.num_cameras
@@ -98,7 +98,7 @@ class MyDetector:
         """
         use the initial frames as the backgrounds
         """
-        for num in range(30):   # use the initial 30 frames as background scenes
+        for num in range(150):   # use the initial 150 frames as background scenes
             for capture in range(self.num_cameras):
                 ret, temp_frame = self.__captures[capture].read()
                 self.__bs[capture].apply(temp_frame)
@@ -126,8 +126,6 @@ class MyDetector:
             b_frame = cv2.GaussianBlur(d_frame, (9, 9), 0)
             # thresholding
             t_frame = self.__rgb_threshold(b_frame)
-            if capture == 1:
-                cv2.imshow("test", t_frame)
             # morphological processing
             kernel_o = np.ones((13, 13), np.uint8)
             kernel_c = np.ones((5, 5), np.uint8)
