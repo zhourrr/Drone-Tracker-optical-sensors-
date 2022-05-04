@@ -7,10 +7,10 @@ from coordinator import *
 plt.ion()
 
 Cam_w = 640
-Cam_h = 640
+Cam_h = 480
 Cam1 = Camera(width=Cam_w, height=Cam_h, cam_center=np.array([-11, 50, 0]), angle_degree=70)
 Cam2 = Camera(width=Cam_w, height=Cam_h, cam_center=np.array([ 11, 50, 0]), angle_degree=70)
-detector = MyDetector(captures=["test.mp4", "test1.mp4"], cameras=[Cam1, Cam2], wt=30, width=Cam_w, height=Cam_h)
+detector = MyDetector(captures=["test7.mp4", "test6.mp4"], cameras=[Cam1, Cam2], wt=30, width=Cam_w, height=Cam_h)
 coordinator = Coordinator(detector)
 detector.tracker_init(coordinator)
 detector.init_background()

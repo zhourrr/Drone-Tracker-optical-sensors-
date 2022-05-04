@@ -29,7 +29,6 @@ class MyDetector:
         __wT:           wait time
         __area_max:     the largest area of a detected contour
         __area_min:     the smallest area of a detected contour
-        __threshold:    the threshold for background subtraction
         __similarity:   a constant threshold for similarity comparison
         __flag_s:       a flag variable for video pause and continue
         num_cameras:    the number of cameras
@@ -37,7 +36,7 @@ class MyDetector:
         trackers:       a list, which contains tracking units for each camera
     """
 
-    def __init__(self, captures=None, roi=None, wt=15, area_min=500, area_max=50000,
+    def __init__(self, captures=None, roi=None, wt=15, area_min=50, area_max=50000,
                  cameras=None, width=1920, height=1080):
         # video captures
         if captures is None:
@@ -70,13 +69,12 @@ class MyDetector:
             else:
                 self.__roi_info.append(roi[i])
             # opencv background subtractor
-            self.__bs.append(cv2.createBackgroundSubtractorMOG2(history=3000, detectShadows=True))
+            self.__bs.append(cv2.createBackgroundSubtractorMOG2(history=3000, varThreshold=12, detectShadows=True))
             # one detected object list for each camera
             self.__cur_objects.append([])
         self.__wT = wt
         self.__area_max = area_max
         self.__area_min = area_min
-        self.__threshold = 30
         self.__similarity = 0.35
         self.__flag_s = False
         self.roi = [None] * self.num_cameras
@@ -119,29 +117,31 @@ class MyDetector:
         """
         for capture in range(self.num_cameras):
             # background subtraction
-            bg = self.__bs[capture].getBackgroundImage()
-            self.__bs[capture].apply(self.roi[capture])
-            d_frame = cv2.absdiff(bg, self.roi[capture])
+            d_frame = self.__bs[capture].apply(self.roi[capture])
             # blur the image, remove noises, parameters: kernel size, standard deviation
             b_frame = cv2.GaussianBlur(d_frame, (9, 9), 0)
             # thresholding
-            t_frame = self.__rgb_threshold(b_frame)
-            # morphological processing
-            kernel_o = np.ones((13, 13), np.uint8)
-            kernel_c = np.ones((5, 5), np.uint8)
-            m_frame = cv2.morphologyEx(t_frame, cv2.MORPH_OPEN, kernel_o)
-            m_frame = cv2.morphologyEx(m_frame, cv2.MORPH_CLOSE, kernel_c)
-            self.__mask[capture] = m_frame
+            _, t_frame = cv2.threshold(b_frame, 200, 255, cv2.THRESH_BINARY)
+            self.__mask[capture] = t_frame
 
-    def __rgb_threshold(self, diff_img):
+    def __rgb_threshold(self, img, bg):
         """
+        not used!!!
         this function thresholds an RGB image and returns the resultant image
         """
-        _, t_image_1 = cv2.threshold(diff_img[:, :, 0], self.__threshold, 255, cv2.THRESH_BINARY)
-        _, t_image_2 = cv2.threshold(diff_img[:, :, 1], self.__threshold, 255, cv2.THRESH_BINARY)
-        _, t_image_3 = cv2.threshold(diff_img[:, :, 2], self.__threshold, 255, cv2.THRESH_BINARY)
+        diff_img = cv2.absdiff(img, bg)
+        diff_img = cv2.GaussianBlur(diff_img, (9, 9), 0)
+        _, t_image_1 = cv2.threshold(diff_img[:, :, 0], 30, 255, cv2.THRESH_BINARY)
+        _, t_image_2 = cv2.threshold(diff_img[:, :, 1], 30, 255, cv2.THRESH_BINARY)
+        _, t_image_3 = cv2.threshold(diff_img[:, :, 2], 30, 255, cv2.THRESH_BINARY)
         temp = cv2.bitwise_or(t_image_1, t_image_2)
-        res = cv2.bitwise_or(temp, t_image_3)
+        temp = cv2.bitwise_or(temp, t_image_3)
+        g_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        g_bg = cv2.cvtColor(bg, cv2.COLOR_BGR2GRAY)
+        diff_img = cv2.absdiff(g_img, g_bg)
+        diff_img = cv2.GaussianBlur(diff_img, (9, 9), 0)
+        _, t_img = cv2.threshold(diff_img, 30, 255, cv2.THRESH_BINARY)
+        res = cv2.bitwise_or(temp, t_img)
         return res
 
     def __get_contours(self):
@@ -165,7 +165,7 @@ class MyDetector:
                     if self.__similarity_compare(obj, bg):
                         continue
                     # shape detection, remove irregular objects
-                    if w > 3.5 * h or h > 3.5 * w:
+                    if w > 5 * h or h > 5 * w:
                         continue
                     self.__cur_objects[capture].append((x, y, w, h))
 
@@ -184,7 +184,7 @@ class MyDetector:
                             2, (0, 255, 0), 2)
             objects.append(objects_id)
             # display Kalman filter predictions
-            self.trackers[capture].show_kf(self.roi[capture])
+            # self.trackers[capture].show_kf(self.roi[capture])
         return tuple(objects)
 
     def __similarity_compare(self, img1, img2):
