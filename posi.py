@@ -8,6 +8,7 @@ Created on Thu Mar 31 21:17:18 2022
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import time
 
 class Ray:
     def __init__(self, origin = np.array([]), direction = np.array([])):
@@ -65,6 +66,7 @@ class Locate:
         self.plt_color = ['cx','gx','mx','rx','yx','kx']
         self.color_index = 0
         self.id_color = {}
+        self.warnU = warningUnit()
         self.camera_pos = [20,50]
         self.path_step = 0
         
@@ -83,25 +85,30 @@ class Locate:
                     if id1[0] not in self.id_color.keys():
                         self.id_color[id1[0]] = self.plt_color[self.color_index%6]
                         self.color_index += 1
+                    self.warnU.checkAndAddNew(id1[0])
+                    break
         #pos_3d store the position of each object in one frame
-        pos_3d = [0]*len(path)
+        pos_3d = [None]*len(path)
         for i in range(len(path)):
             x0 = path[i][0][1] + path[i][0][3]/ 2
             y0 = path[i][0][2] + path[i][0][4]/ 2
             x1 = path[i][1][1] + path[i][1][3]/ 2
             y1 = path[i][1][2] + path[i][1][4]/ 2
             pos_3d[i] = m.get_coord_basic([(x0, y0), (x1, y1)])
-            if pos_3d[i][2] >= 0:
+            # if invalid position
+            if pos_3d[i][2] >= 0: 
                 print("position error")
             else:
                 self.trajectory.append([path[i][0][0],pos_3d[i],self.path_step])
+                self.warnU.updateXandT(path[i][0][0], pos_3d[i])
             #print(path)
         
         #path_step is the total length of all path
         #print(self.id_color)
         self.path_step += 1
         self.img_show([path,pos_3d])
-
+        self.warnU.checkWarning()
+        
     def img_show(self,path_info):
         """
         plot real time positioning 
@@ -158,8 +165,78 @@ class Locate:
         plt.draw()   
 
 
+class queueBoundedX:
+    def __init__(self, queue_size = 8):
+        self.qX = []
+        self.qT = []
+        self.fillcount = 0
+        self.size = queue_size
+        self.newFlag = False
+        
+    def push(self, x, t):
+        if (self.fillcount == self.size):
+            self.qX.pop(0)
+            self.qT.pop(0)
+        else:
+            self.fillcount += 1
+        self.qX.append(x)
+        self.qT.append(t)
+        self.newFlag = True
+        
+    def get_velocity(self):
+        #print((self.qX[-1] - self.qX[0]) / (self.qT[-1] - self.qT[0]))
+        return (self.qX[-1] - self.qX[0]) / (self.qT[-1] - self.qT[0])
 
-
+    def setNotNew(self):
+        self.newFlag = False
+    
+    def getNewFlag(self):
+        return self.newFlag
+        
+    def get_position(self):
+        return self.qX[-1]
+    
+class warningUnit:
+    def __init__(self, CONST_QUEUE_SIZE = 8, TIME_PREDICT = 5, RADIUS = 50):
+        self.CONST_QUEUE_SIZE = CONST_QUEUE_SIZE
+        self.TIME_PREDICT_RANGE = TIME_PREDICT
+        self.RADIUS = RADIUS
+        self.id_q_dict = {}
+        
+    def checkAndAddNew(self, id1):
+        if id1 not in self.id_q_dict.keys():
+            self.id_q_dict[id1] = queueBoundedX(self.CONST_QUEUE_SIZE)
+    
+    def updateXandT(self, id1, x):
+        self.id_q_dict[id1].push(x, time.time())
+    
+    def checkWarning(self):
+        vec_pos_List = []
+        for id1 in self.id_q_dict:
+            if self.id_q_dict[id1].getNewFlag():
+                vec_pos_List.append((id1, self.id_q_dict[id1].get_velocity(), self.id_q_dict[id1].get_position())) 
+                self.id_q_dict[id1].setNotNew()
+        warning_pair_list = []
+        if(len(vec_pos_List) > 1):
+            for i in range(len(vec_pos_List) - 1):
+                for j in range(i + 1, len(vec_pos_List)):
+                    rel_pos = vec_pos_List[j][2] - vec_pos_List[i][2]
+                    rel_vt = (vec_pos_List[j][1] - vec_pos_List[i][1]) * self.TIME_PREDICT_RANGE
+                    rel_vt_value = np.linalg.norm(rel_vt)
+                    v_dir = rel_vt / rel_vt_value
+                    proj_pos_vt_dist = rel_pos.dot(v_dir)
+                    if proj_pos_vt_dist >= 0:
+                        continue
+                    min_dist = 0
+                    proj_pos_vt_dist *= -1
+                    if proj_pos_vt_dist > rel_vt_value:
+                        min_dist = np.linalg.norm(rel_vt + rel_pos)
+                    else:
+                        min_dist = np.linalg.norm(v_dir * proj_pos_vt_dist + rel_pos)
+                    if min_dist < self.RADIUS:
+                        warning_pair_list.append((vec_pos_List[i][0], vec_pos_List[j][0]))
+        for warning in warning_pair_list:
+            print("Warning of Collision for: %d and %d." % (warning[0], warning[1]))
 
 '''
 
