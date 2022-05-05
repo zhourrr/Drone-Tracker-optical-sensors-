@@ -121,28 +121,8 @@ class MyDetector:
             # blur the image, remove noises, parameters: kernel size, standard deviation
             b_frame = cv2.GaussianBlur(d_frame, (9, 9), 0)
             # thresholding
-            _, t_frame = cv2.threshold(b_frame, 200, 255, cv2.THRESH_BINARY)
+            _, t_frame = cv2.threshold(b_frame, 191, 255, cv2.THRESH_BINARY)
             self.__mask[capture] = t_frame
-
-    def __rgb_threshold(self, img, bg):
-        """
-        not used!!!
-        this function thresholds an RGB image and returns the resultant image
-        """
-        diff_img = cv2.absdiff(img, bg)
-        diff_img = cv2.GaussianBlur(diff_img, (9, 9), 0)
-        _, t_image_1 = cv2.threshold(diff_img[:, :, 0], 30, 255, cv2.THRESH_BINARY)
-        _, t_image_2 = cv2.threshold(diff_img[:, :, 1], 30, 255, cv2.THRESH_BINARY)
-        _, t_image_3 = cv2.threshold(diff_img[:, :, 2], 30, 255, cv2.THRESH_BINARY)
-        temp = cv2.bitwise_or(t_image_1, t_image_2)
-        temp = cv2.bitwise_or(temp, t_image_3)
-        g_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        g_bg = cv2.cvtColor(bg, cv2.COLOR_BGR2GRAY)
-        diff_img = cv2.absdiff(g_img, g_bg)
-        diff_img = cv2.GaussianBlur(diff_img, (9, 9), 0)
-        _, t_img = cv2.threshold(diff_img, 30, 255, cv2.THRESH_BINARY)
-        res = cv2.bitwise_or(temp, t_img)
-        return res
 
     def __get_contours(self):
         """

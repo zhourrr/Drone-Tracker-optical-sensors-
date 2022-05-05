@@ -42,10 +42,10 @@ class MyTracker:
         Outputs:
             objs_id:    a list which stores ids and other information of input objects
         """
-        num_objs = len(objs_rect)
-        # if the number of detected objects is more than 8, there are some noises in our frames
-        # assume the expected number of objects is no more than 8
-        if num_objs > 8:
+        num_objs = len(objs_rect) - len(self.objects)
+        # if the number of newly detected objects is more than 5, there are some noises in our frames
+        # assume the expected number of new objects is no more than 5
+        if num_objs > 5:
             flag_n = 1
         else:
             flag_n = 0
