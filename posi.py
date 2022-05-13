@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+  # -*- coding: utf-8 -*-
 """
 Created on Thu Mar 31 21:17:18 2022
 
@@ -6,7 +6,7 @@ Created on Thu Mar 31 21:17:18 2022
 """
 
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 import time
 
@@ -67,8 +67,9 @@ class Locate:
         self.color_index = 0
         self.id_color = {}
         self.warnU = warningUnit()
-        self.camera_pos = [20,50]
+        self.camera_pos = [22,50]
         self.path_step = 0
+        self.arrow = {}
         
     def locate(self,m,ids):
             
@@ -81,6 +82,10 @@ class Locate:
             for id2 in ids[1]:
                 if  id2[0] == id1[0]:
                     path.append([id1,id2])
+                    # load position for error start point
+                    if id1[0] not in self.arrow.keys():
+                        self.arrow[id1[0]] = []
+                    
                     #give each id a different color for plotting (but we just have 6 colors)
                     if id1[0] not in self.id_color.keys():
                         self.id_color[id1[0]] = self.plt_color[self.color_index%6]
@@ -89,6 +94,7 @@ class Locate:
                     break
         #pos_3d store the position of each object in one frame
         pos_3d = [None]*len(path)
+        position = {}
         for i in range(len(path)):
             x0 = path[i][0][1] + path[i][0][3]/ 2
             y0 = path[i][0][2] + path[i][0][4]/ 2
@@ -99,69 +105,82 @@ class Locate:
             if pos_3d[i][2] >= 0: 
                 print("position error")
             else:
+                position[path[i][0][0]] = pos_3d[i]
+                self.arrow[path[i][0][0]].append(pos_3d[i])
                 self.trajectory.append([path[i][0][0],pos_3d[i],self.path_step])
                 self.warnU.updateXandT(path[i][0][0], pos_3d[i])
             #print(path)
-        
+
         #path_step is the total length of all path
         #print(self.id_color)
+        plot_arrow = {}
+        for ids in self.arrow.keys():
+            if len(self.arrow[ids]) >= 2:
+                plot_arrow[ids] = []
+                plot_arrow[ids].append(self.arrow[ids][len(self.arrow[ids])-2])
+                plot_arrow[ids].append(self.arrow[ids][len(self.arrow[ids])-1])
+                
         self.path_step += 1
-        self.img_show([path,pos_3d])
+        self.img_show(plot_arrow,position)            
         self.warnU.checkWarning()
+
         
-    def img_show(self,path_info):
+        
+        
+    def img_show(self,arrow,pos):
         """
         plot real time positioning 
         """
-        path = path_info[1]
-        ids = path_info[0]
-        if len(path) == 0:
+        
+        if len(arrow) == 0:
             return
         self.img_counter += 1
         
-        if self.img_counter % 50 == 0:
-            plt.cla()
+        if self.img_counter % 20 == 0:
+            plt.clf()
+            
         g_xy = plt.subplot(1, 2, 1) 
         plt.plot(-self.camera_pos[0]/2,self.camera_pos[1],"bo")
         plt.plot(self.camera_pos[0]/2,self.camera_pos[1],"bo") 
         
-        if len(path) == 1:
-            plt.plot(path[0][0],path[0][1],self.id_color[ids[0][0][0]])
+                
+        for idss in pos.keys():
+            if idss in arrow.keys():
+                x0 = arrow[idss][0][0]
+                y0 = arrow[idss][0][1]
+                x1 = arrow[idss][1][0]
+                y1 = arrow[idss][1][1]
+                #.quiver(x0,y0, (x1-x0)*3, (y1-y0)*3, color=self.id_color[idss][0], angles='xy', scale_units='xy', scale=1)
+            plt.plot(pos[idss][0],pos[idss][1],self.id_color[idss])
             
-        elif len(path) == 2:
-            plt.plot(path[0][0],path[0][1],self.id_color[ids[0][0][0]])
-            plt.plot(path[1][0],path[1][1],self.id_color[ids[1][0][0]])
-            
-        elif len(path) == 3:
-            plt.plot(path[0][0],path[0][1],self.id_color[ids[0][0][0]])
-            plt.plot(path[1][0],path[1][1],self.id_color[ids[1][0][0]])
-            plt.plot(path[2][0],path[2][1],self.id_color[ids[2][0][0]])
-        
+
         plt.xlim([-100,100])
         plt.ylim([0,200])
         plt.ylabel('height')
         plt.xlabel('x')
         
-        if self.img_counter % 50 == 0:
-            plt.cla()
-        g_xz = plt.subplot(1, 2, 2)
+        #if self.img_counter % 5 == 0:
+            #plt.cla()
+        g_xz = plt.subplot(1, 2, 2) 
         plt.plot(-self.camera_pos[0]/2,0,"bo")
         plt.plot(self.camera_pos[0]/2,0,"bo")
         
-        if len(path) == 1:
-            plt.plot(path[0][0],-path[0][2], self.id_color[ids[0][0][0]])
-        elif len(path) == 2:  
-            plt.plot(path[0][0],-path[0][2], self.id_color[ids[0][0][0]])
-            plt.plot(path[1][0],-path[1][2], self.id_color[ids[1][0][0]])
-        elif len(path) == 3:
-            plt.plot(path[0][0],-path[0][2], self.id_color[ids[0][0][0]])
-            plt.plot(path[1][0],-path[1][2], self.id_color[ids[1][0][0]])
-            plt.plot(path[2][0],-path[2][2], self.id_color[ids[2][0][0]])            
+        
+        for idss in pos.keys():
+            if idss in arrow.keys():
+                x0 = arrow[idss][0][0]
+                z0 = -arrow[idss][0][2]
+                x1 = arrow[idss][1][0]
+                z1 = -arrow[idss][1][2]
+                #plt.quiver(x0,z0, (x1-x0)*3, (z1-z0)*3, color=self.id_color[idss][0], angles='xy', scale_units='xy', scale=1)
+            plt.plot(pos[idss][0],-pos[idss][2],self.id_color[idss])
+            
         
         plt.xlim([-100,100])
         plt.ylim([0,300])
         plt.ylabel('distance')
         plt.xlabel('x')
+
         plt.draw()   
 
 
